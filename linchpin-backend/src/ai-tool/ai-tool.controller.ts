@@ -8,8 +8,13 @@ import {
   Body,
   Req,
   ForbiddenException,
+  Query,
 } from '@nestjs/common';
 import { AiToolService } from './ai-tool.service';
+import {
+  SubmitAIToolDto,
+  RejectSubmissionDto,
+} from './validations/ai-tool.zod';
 
 @Controller('ai-tools')
 export class AiToolController {
@@ -21,42 +26,42 @@ export class AiToolController {
     }
   }
 
-  @Post('bulk')
+  @Post('ai/bulk')
   async createBulk(@Body() tools: any[], @Req() req) {
     this.checkAdmin(req);
     // Optionally validate each tool with Zod schema here
     return this.aiToolService.createBulk(tools);
   }
 
-  @Post()
+  @Post('ai')
   async create(@Body() tool: any, @Req() req) {
     this.checkAdmin(req);
     return this.aiToolService.create(tool);
   }
 
-  @Get()
+  @Get('ai/all')
   findAll() {
     return this.aiToolService.findAll();
   }
 
-  @Get(':id')
+  @Get('ai/:id')
   findOne(@Param('id') id: string) {
     return this.aiToolService.findOne(id);
   }
 
-  @Patch(':id')
+  @Patch('ai/:id')
   async update(@Param('id') id: string, @Body() data: any, @Req() req) {
     this.checkAdmin(req);
     return this.aiToolService.update(id, data);
   }
 
-  @Delete(':id')
+  @Delete('ai/:id')
   async remove(@Param('id') id: string, @Req() req) {
     this.checkAdmin(req);
     return this.aiToolService.remove(id);
   }
 
-  @Post(':id/review')
+  @Post('ai/:id/review')
   async addReview(
     @Param('id') toolId: string,
     @Body() { rating, comment }: { rating: number; comment: string },
@@ -65,7 +70,7 @@ export class AiToolController {
     return this.aiToolService.addReview(toolId, req.user._id, rating, comment);
   }
 
-  @Delete(':id/review/:reviewId')
+  @Delete('ai/:id/review/:reviewId')
   async deleteReview(
     @Param('id') toolId: string,
     @Param('reviewId') reviewId: string,
@@ -74,8 +79,40 @@ export class AiToolController {
     return this.aiToolService.deleteReview(toolId, reviewId, req.user._id);
   }
 
-  @Get(':id/reviews')
+  @Get('ai/:id/reviews')
   async getAllReviews(@Param('id') toolId: string) {
     return this.aiToolService.getAllReviews(toolId);
+  }
+
+  @Post('submissions/submit')
+  async submitTool(@Body() toolData: SubmitAIToolDto, @Req() req) {
+    return this.aiToolService.submitToolForApproval(toolData, req.user._id);
+  }
+
+  @Get('submissions')
+  async getSubmissions(@Query('status') status: string, @Req() req) {
+    this.checkAdmin(req);
+    return this.aiToolService.getSubmissions(status as any);
+  }
+
+  @Patch('submissions/:id/approve')
+  async approveSubmission(@Param('id') id: string, @Req() req) {
+    this.checkAdmin(req);
+    return this.aiToolService.approveSubmission(id, req.user._id);
+  }
+
+  @Patch('submissions/:id/reject')
+  async rejectSubmission(
+    @Param('id') id: string,
+    @Body() rejectData: RejectSubmissionDto,
+    @Req() req,
+  ) {
+    this.checkAdmin(req);
+    return this.aiToolService.rejectSubmission(id, req.user._id, rejectData);
+  }
+
+  @Get('submissions/my')
+  async getUserSubmissions(@Req() req) {
+    return this.aiToolService.getUserSubmissions(req.user._id);
   }
 }

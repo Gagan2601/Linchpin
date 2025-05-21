@@ -36,5 +36,23 @@ export const AIToolSchema = z.object({
 
 export const BulkAIToolSchema = z.array(AIToolSchema);
 
+// Add these new schemas for submissions
+export const AIToolSubmissionSchema = z.object({
+  toolData: AIToolSchema,
+  submittedBy: z.string(), // This will be converted to ObjectId in service
+  status: z.enum(['pending', 'approved', 'rejected']).optional(),
+  reviewedBy: z.string().optional(), // This will be converted to ObjectId in service
+  reviewedAt: z.date().optional(),
+  rejectionReason: z.string().optional(),
+});
+
+export const SubmitAIToolDto = AIToolSchema;
+export const RejectSubmissionDto = z.object({
+  reason: z.string(),
+});
+
 export type AIToolInput = z.infer<typeof AIToolSchema>;
 export type BulkAIToolInput = z.infer<typeof BulkAIToolSchema>;
+export type AIToolSubmissionInput = z.infer<typeof AIToolSubmissionSchema>;
+export type SubmitAIToolDto = z.infer<typeof SubmitAIToolDto>;
+export type RejectSubmissionDto = z.infer<typeof RejectSubmissionDto>;

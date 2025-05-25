@@ -12,7 +12,7 @@ export class EmailService {
   });
 
   async sendVerificationEmail(email: string, token: string) {
-    const verificationLink = `http://localhost:3000/api/auth/verify-email/${token}`;
+    const verificationLink = `http://localhost:3000/api/auth/verify-email/${token}`; //change when frontend ready
 
     const info = await this.transporter.sendMail({
       from: '"Linchpin" <thelinchpin.tech@gmail.com>',
@@ -26,5 +26,46 @@ export class EmailService {
     });
 
     return info;
+  }
+
+  async sendPasswordResetEmail(email: string, token: string) {
+    const resetLink = `http://localhost:3000/reset-password?token=${token}`; //change when frontend ready
+
+    await this.transporter.sendMail({
+      from: '"Linchpin" <thelinchpin.tech@gmail.com>',
+      to: email,
+      subject: 'Password Reset Request',
+      html: `
+        <h2>Password Reset</h2>
+        <p>You requested to reset your password. Click the button below to proceed:</p>
+        <a href="${resetLink}" style="padding: 10px 15px; background: #0070f3; color: white; text-decoration: none;">Reset Password</a>
+        <p>This link will expire in 1 hour.</p>
+        <p>If you didn't request this, please ignore this email.</p>
+      `,
+    });
+  }
+
+  async sendSubmissionStatusEmail(
+    email: string,
+    toolName: string,
+    status: 'approved' | 'rejected',
+    reason?: string,
+  ) {
+    const statusMsg =
+      status === 'approved'
+        ? 'has been approved and published!'
+        : `was rejected. ${reason ? `Reason: ${reason}` : ''}`;
+
+    const frontendUrl = `http://localhost:3000/notification`; //add frontend url
+
+    await this.transporter.sendMail({
+      to: email,
+      subject: `Your AI Tool Submission Update - ${toolName}`,
+      html: `
+      <h2>Submission Status Update</h2>
+      <p>Your AI tool <strong>${toolName}</strong> ${statusMsg}</p>
+      <a href="${frontendUrl}/submissions" style="...">View Submission</a>   
+    `,
+    });
   }
 }

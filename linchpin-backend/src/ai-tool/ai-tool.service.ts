@@ -12,6 +12,8 @@ import {
   AIToolInput,
   AIToolSchema,
   BulkAIToolInput,
+  NotificationResponse,
+  NotificationResponseSchema,
 } from './validations/ai-tool.zod';
 import { User, UserDocument } from 'src/user/schemas/user.schema';
 import {
@@ -24,6 +26,7 @@ import {
   AIToolSubmissionInput,
 } from './validations/ai-tool.zod';
 import { z } from 'zod';
+import { EmailService } from 'src/email/email.service';
 
 @Injectable()
 export class AiToolService {
@@ -34,6 +37,7 @@ export class AiToolService {
     private readonly aiToolSubmissionModel: Model<AIToolSubmissionDocument>,
     @InjectModel(User.name)
     private userModel: Model<UserDocument>,
+    private emailService: EmailService,
   ) {}
 
   async create(data: AIToolInput): Promise<AITool> {
@@ -233,6 +237,7 @@ export class AiToolService {
     try {
       const submission = await this.aiToolSubmissionModel
         .findById(submissionId)
+        .populate('submittedBy', 'email')
         .session(session);
       if (!submission) {
         throw new NotFoundException('Submission not found');
@@ -252,9 +257,22 @@ export class AiToolService {
       submission.status = 'approved';
       submission.reviewedBy = new Types.ObjectId(adminId);
       submission.reviewedAt = new Date();
+      submission.notifications.push({
+        text: `Your submission "${submission.toolData.name}" was approved!`,
+        isRead: false,
+        createdAt: new Date(),
+      });
+
       await submission.save({ session });
 
       await session.commitTransaction();
+
+      await this.emailService.sendSubmissionStatusEmail(
+        (submission.submittedBy as any).email,
+        submission.toolData.name,
+        'approved',
+      );
+
       return createdTool;
     } catch (error) {
       await session.abortTransaction();
@@ -277,27 +295,56 @@ export class AiToolService {
     submissionId: string,
     adminId: string,
     rejectData: RejectSubmissionDto,
-  ): Promise<AIToolSubmission> {
-    try {
-      // Validate rejection reason
-      const { reason } = RejectSubmissionDto.parse(rejectData);
+  ): Promise<AIToolSubmissionDocument> {
+    const session = await this.aiToolSubmissionModel.db.startSession();
+    session.startTransaction();
 
-      const submission =
-        await this.aiToolSubmissionModel.findById(submissionId);
+    try {
+      // Populate the submittedBy field
+      const submission = await this.aiToolSubmissionModel
+        .findById(submissionId)
+        .populate<{ submittedBy }>('submittedBy', 'email')
+        .session(session);
+
       if (!submission) {
         throw new NotFoundException('Submission not found');
       }
+
       if (submission.status !== 'pending') {
         throw new BadRequestException('Submission has already been processed');
       }
 
+      // Validate rejection reason
+      const { reason } = RejectSubmissionDto.parse(rejectData);
+
+      // Update submission
       submission.status = 'rejected';
       submission.reviewedBy = new Types.ObjectId(adminId);
       submission.reviewedAt = new Date();
       submission.rejectionReason = reason;
 
-      return await submission.save();
+      // Add notification
+      submission.notifications.push({
+        text: `Your submission "${submission.toolData.name}" was rejected. ${reason ? `Reason: ${reason}` : ''}`,
+        isRead: false,
+        createdAt: new Date(),
+      });
+
+      await submission.save({ session });
+      await session.commitTransaction();
+
+      // Send email notification
+      await this.emailService.sendSubmissionStatusEmail(
+        submission.submittedBy.email,
+        submission.toolData.name,
+        'rejected',
+        reason,
+      );
+
+      return submission;
     } catch (error) {
+      await session.abortTransaction();
+
       if (error instanceof z.ZodError) {
         throw new BadRequestException(error.errors);
       }
@@ -308,6 +355,8 @@ export class AiToolService {
         throw error;
       }
       throw new InternalServerErrorException('Failed to reject submission');
+    } finally {
+      session.endSession();
     }
   }
 
@@ -321,6 +370,52 @@ export class AiToolService {
       throw new InternalServerErrorException(
         'Failed to fetch user submissions',
       );
+    }
+  }
+
+  async getNotifications(userId: string): Promise<NotificationResponse[]> {
+    try {
+      const submissions = await this.aiToolSubmissionModel
+        .find({
+          submittedBy: new Types.ObjectId(userId),
+          'notifications.isRead': false,
+        })
+        .select('notifications toolData.name _id')
+        .lean();
+
+      const notifications = submissions.flatMap((sub) =>
+        sub.notifications.map((notif) => ({
+          ...notif,
+          toolName: sub.toolData.name,
+          toolId: sub._id,
+        })),
+      );
+
+      return NotificationResponseSchema.array().parse(notifications);
+    } catch (error) {
+      console.error(`Failed to fetch notifications: ${error.message}`);
+      throw new InternalServerErrorException(
+        'Failed to retrieve notifications',
+      );
+    }
+  }
+
+  async markNotificationAsRead(
+    userId: string,
+    toolId: string,
+    notificationId: string,
+  ): Promise<void> {
+    const result = await this.aiToolSubmissionModel.updateOne(
+      {
+        _id: new Types.ObjectId(toolId),
+        submittedBy: new Types.ObjectId(userId),
+        'notifications._id': new Types.ObjectId(notificationId),
+      },
+      { $set: { 'notifications.$.isRead': true } },
+    );
+
+    if (result.modifiedCount === 0) {
+      throw new NotFoundException('Notification not found or already read');
     }
   }
 }

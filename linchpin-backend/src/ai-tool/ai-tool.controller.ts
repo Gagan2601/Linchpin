@@ -9,14 +9,19 @@ import {
   Req,
   ForbiddenException,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { AiToolService } from './ai-tool.service';
 import {
   SubmitAIToolDto,
   RejectSubmissionDto,
+  NotificationResponse,
 } from './validations/ai-tool.zod';
+import { UserThrottlerGuard } from 'src/throttler/user-throttler.guard';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('ai-tools')
+@UseGuards(UserThrottlerGuard)
 export class AiToolController {
   constructor(private readonly aiToolService: AiToolService) {}
 
@@ -40,6 +45,7 @@ export class AiToolController {
   }
 
   @Get('ai/all')
+  @Throttle({ default: { limit: 60, ttl: 60000 } }) // 60/min
   findAll() {
     return this.aiToolService.findAll();
   }
@@ -62,6 +68,7 @@ export class AiToolController {
   }
 
   @Post('ai/:id/review')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5/min
   async addReview(
     @Param('id') toolId: string,
     @Body() { rating, comment }: { rating: number; comment: string },
@@ -85,6 +92,7 @@ export class AiToolController {
   }
 
   @Post('submissions/submit')
+  @Throttle({ default: { limit: 5, ttl: 86400000 } }) // 5/day
   async submitTool(@Body() toolData: SubmitAIToolDto, @Req() req) {
     return this.aiToolService.submitToolForApproval(toolData, req.user._id);
   }
@@ -114,5 +122,24 @@ export class AiToolController {
   @Get('submissions/my')
   async getUserSubmissions(@Req() req) {
     return this.aiToolService.getUserSubmissions(req.user._id);
+  }
+
+  @Get('submissions/notifications')
+  async getNotifications(@Req() req): Promise<NotificationResponse[]> {
+    return this.aiToolService.getNotifications(req.user._id);
+  }
+
+  @Patch('submissions/:toolId/notifications/:notificationId/read')
+  async markNotificationAsRead(
+    @Param('toolId') toolId: string,
+    @Param('notificationId') notificationId: string,
+    @Req() req,
+  ) {
+    await this.aiToolService.markNotificationAsRead(
+      req.user._id,
+      toolId,
+      notificationId,
+    );
+    return { message: 'Notification marked as read' };
   }
 }

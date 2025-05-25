@@ -25,6 +25,24 @@ export class AIToolSubmission {
 
   @Prop({ default: null })
   rejectionReason?: string;
+
+  @Prop({
+    type: [
+      {
+        type: {
+          text: String,
+          isRead: { type: Boolean, default: false },
+          createdAt: { type: Date, default: Date.now },
+        },
+      },
+    ],
+    default: [],
+  })
+  notifications: {
+    text: string;
+    isRead: boolean;
+    createdAt: Date;
+  }[];
 }
 
 export type AIToolSubmissionDocument = AIToolSubmission & Document;

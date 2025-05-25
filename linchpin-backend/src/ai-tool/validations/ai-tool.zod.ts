@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import { z } from 'zod';
 
 export const AIToolSchema = z.object({
@@ -50,6 +51,17 @@ export const SubmitAIToolDto = AIToolSchema;
 export const RejectSubmissionDto = z.object({
   reason: z.string(),
 });
+
+export const NotificationResponseSchema = z.object({
+  _id: z.instanceof(Types.ObjectId).optional(),
+  text: z.string(),
+  isRead: z.boolean(),
+  createdAt: z.date(),
+  toolName: z.string(),
+  toolId: z.instanceof(Types.ObjectId),
+});
+
+export type NotificationResponse = z.infer<typeof NotificationResponseSchema>;
 
 export type AIToolInput = z.infer<typeof AIToolSchema>;
 export type BulkAIToolInput = z.infer<typeof BulkAIToolSchema>;

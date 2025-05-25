@@ -40,6 +40,12 @@ export class User {
 
   @Prop({ default: null, expires: 300 })
   autoDeleteAt: Date;
+
+  @Prop()
+  passwordResetToken: string;
+
+  @Prop()
+  passwordResetTokenExpires: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

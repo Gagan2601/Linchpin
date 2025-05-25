@@ -14,6 +14,7 @@ import {
   AIToolSubmission,
   AIToolSubmissionSchema,
 } from './schemas/ai-tool-submission.schema';
+import { EmailService } from 'src/email/email.service';
 
 @Module({
   imports: [
@@ -23,18 +24,21 @@ import {
     ]),
     UserModule,
   ],
-  providers: [AiToolService],
+  providers: [AiToolService, EmailService],
   controllers: [AiToolController],
 })
 export class AiToolModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer.apply(AuthMiddleware).forRoutes(
-      { path: 'ai-tools', method: RequestMethod.POST },
-      { path: 'ai-tools/bulk', method: RequestMethod.POST },
-      { path: 'ai-tools/:id', method: RequestMethod.PATCH },
-      { path: 'ai-tools/:id', method: RequestMethod.DELETE },
-      { path: 'ai-tools/:id/review', method: RequestMethod.POST },
-      { path: 'ai-tools/:id/review/:reviewId', method: RequestMethod.DELETE },
+      { path: 'ai-tools/ai', method: RequestMethod.POST },
+      { path: 'ai-tools/ai/bulk', method: RequestMethod.POST },
+      { path: 'ai-tools/ai/:id', method: RequestMethod.PATCH },
+      { path: 'ai-tools/ai/:id', method: RequestMethod.DELETE },
+      { path: 'ai-tools/ai/:id/review', method: RequestMethod.POST },
+      {
+        path: 'ai-tools/ai/:id/review/:reviewId',
+        method: RequestMethod.DELETE,
+      },
       { path: 'ai-tools/submissions', method: RequestMethod.GET },
       {
         path: 'ai-tools/submissions/:id/approve',
@@ -51,6 +55,14 @@ export class AiToolModule implements NestModule {
       {
         path: 'ai-tools/submissions/my',
         method: RequestMethod.GET,
+      },
+      {
+        path: 'ai-tools/submissions/notifications',
+        method: RequestMethod.GET,
+      },
+      {
+        path: 'ai-tools/submissions/:toolId/notifications/:notificationId/read',
+        method: RequestMethod.PATCH,
       },
     );
   }

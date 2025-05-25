@@ -137,4 +137,54 @@ export class AuthService {
       );
     }
   }
+
+  async initiatePasswordReset(email: string) {
+    try {
+      const user = await this.userModel.findOne({ email });
+      if (!user) {
+        // Don't reveal if user doesn't exist for security
+        return { message: 'If an account exists, a reset link has been sent' };
+      }
+
+      const resetToken = randomBytes(32).toString('hex');
+      const resetTokenExpires = dayjs().add(1, 'hour').toDate();
+
+      user.passwordResetToken = resetToken;
+      user.passwordResetTokenExpires = resetTokenExpires;
+      await user.save();
+
+      await this.emailService.sendPasswordResetEmail(user.email, resetToken);
+
+      return { message: 'Password reset link sent to your email' };
+    } catch (error) {
+      console.error('Password reset error:', error);
+      throw new BadRequestException('Failed to initiate password reset');
+    }
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    try {
+      const user = await this.userModel.findOne({
+        passwordResetToken: token,
+        passwordResetTokenExpires: { $gt: new Date() },
+      });
+
+      if (!user) {
+        throw new BadRequestException('Invalid or expired reset token');
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      user.password = hashedPassword;
+      user.passwordResetToken = null;
+      user.passwordResetTokenExpires = null;
+      await user.save();
+
+      return { message: 'Password reset successfully' };
+    } catch (error) {
+      console.error('Reset password error:', error);
+      throw new BadRequestException(
+        error?.message || 'Failed to reset password',
+      );
+    }
+  }
 }

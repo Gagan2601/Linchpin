@@ -11,12 +11,16 @@ import {
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { Types } from 'mongoose';
+import { Throttle } from '@nestjs/throttler';
+import { UserThrottlerGuard } from 'src/throttler/user-throttler.guard';
 
 @Controller('user')
+@UseGuards(UserThrottlerGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get(':id')
+  @Throttle({ default: { limit: 30, ttl: 60000 } }) // 30/min
   getUser(@Param('id') id: string, @Req() req) {
     if (req.user._id.toString() !== id)
       throw new ForbiddenException('Access denied');
@@ -24,6 +28,7 @@ export class UserController {
   }
 
   @Delete(':id')
+  @Throttle({ default: { limit: 5, ttl: 86400000 } }) // 5/day
   deleteUser(@Param('id') id: string, @Req() req) {
     if (req.user._id.toString() !== id)
       throw new ForbiddenException('Access denied');
@@ -31,6 +36,7 @@ export class UserController {
   }
 
   @Patch(':id')
+  @Throttle({ default: { limit: 15, ttl: 60000 } }) // 15/min
   updateUser(
     @Param('id') id: string,
     @Body()

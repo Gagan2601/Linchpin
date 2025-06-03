@@ -6,6 +6,9 @@ import {
   Param,
   Get,
   UseGuards,
+  Req,
+  Res,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
@@ -19,6 +22,8 @@ import {
   ResetPasswordInput,
   ResetPasswordSchema,
 } from './validations/password-reset.zod';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { Response, Request } from 'express';
 
 @Controller('auth')
 @UseGuards(UserThrottlerGuard)
@@ -35,8 +40,37 @@ export class AuthController {
   @Post('login')
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5/min
   @UsePipes(new ZodValidationPipe(LoginSchema))
-  login(@Body() body: LoginInput) {
-    return this.authService.login(body);
+  async login(
+    @Body() body: LoginInput,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.login(body);
+
+    // Set cookies for tokens
+    if (result.accessToken && result.refreshToken) {
+      // Set access token cookie (15 minutes)
+      res.cookie('access_token', result.accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 15 * 60 * 1000, // 15 minutes
+        path: '/',
+        domain: process.env.COOKIE_DOMAIN,
+      });
+
+      // Set refresh token cookie (7 days)
+      res.cookie('refresh_token', result.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        path: '/',
+        domain: process.env.COOKIE_DOMAIN,
+      });
+    }
+
+    // Return user data without tokens
+    return { user: result.user };
   }
 
   @Get('verify-email/:token')
@@ -57,5 +91,62 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 3600000 } }) // 5 requests/hour
   async resetPassword(@Body() { token, newPassword }: ResetPasswordInput) {
     return this.authService.resetPassword(token, newPassword);
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  async getCurrentUser(@Req() req) {
+    return this.authService.getCurrentUser(req.user.userId);
+  }
+
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    res.cookie('access_token', '', {
+      httpOnly: true,
+      expires: new Date(0),
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      domain: process.env.COOKIE_DOMAIN,
+    });
+
+    res.cookie('refresh_token', '', {
+      httpOnly: true,
+      expires: new Date(0),
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      domain: process.env.COOKIE_DOMAIN,
+    });
+
+    return { message: 'Logged out successfully' };
+  }
+
+  @Post('refresh')
+  @UseGuards(JwtAuthGuard)
+  async refreshToken(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const refreshToken = req.cookies?.refresh_token;
+
+    if (!refreshToken) {
+      throw new UnauthorizedException('No refresh token found');
+    }
+
+    const result = await this.authService.refreshToken(refreshToken);
+
+    // Set new access token cookie
+    res.cookie('access_token', result.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 15 * 60 * 1000, // 15 minutes
+      path: '/',
+      domain: process.env.COOKIE_DOMAIN,
+    });
+
+    return { message: 'Token refreshed successfully' };
   }
 }

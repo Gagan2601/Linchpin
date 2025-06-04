@@ -51,21 +51,21 @@ export class AuthController {
       // Set access token cookie (15 minutes)
       res.cookie('access_token', result.accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: false,
         sameSite: 'lax',
         maxAge: 15 * 60 * 1000, // 15 minutes
         path: '/',
-        domain: process.env.COOKIE_DOMAIN,
+        // domain: process.env.COOKIE_DOMAIN,
       });
 
       // Set refresh token cookie (7 days)
       res.cookie('refresh_token', result.refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: false,
         sameSite: 'lax',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         path: '/',
-        domain: process.env.COOKIE_DOMAIN,
+        // domain: process.env.COOKIE_DOMAIN,
       });
     }
 
@@ -96,6 +96,8 @@ export class AuthController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   async getCurrentUser(@Req() req) {
+    console.log('Cookies:', req.cookies);
+    console.log('User:', req.user);
     return this.authService.getCurrentUser(req.user.userId);
   }
 

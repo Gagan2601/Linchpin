@@ -11,7 +11,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Logo } from '../Logo';
 import { useState, useEffect } from 'react';
-import { Sheet, SheetContent, SheetTrigger } from '../ui/sheet';
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '../ui/sheet';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 
@@ -63,57 +63,73 @@ export function Navbar() {
                                 <span className="sr-only">Toggle Menu</span>
                             </Button>
                         </SheetTrigger>
-                        <SheetContent side="left" className="w-[300px] sm:w-[400px]">
-                            <nav className="flex flex-col gap-6 text-lg">
-                                {navLinks.map((link) => (
-                                    <Link
-                                        key={link.href}
-                                        href={link.href}
-                                        className={cn(
-                                            'transition-colors hover:text-foreground/80',
-                                            pathname === link.href ? 'text-foreground' : 'text-foreground/60'
-                                        )}
-                                    >
-                                        {link.name}
-                                    </Link>
-                                ))}
-                            </nav>
-                            <div className="mt-8 flex flex-col gap-4">
-                                {user ? (
-                                    <>
-                                        <UserAvatar />
-                                        <Button
-                                            variant="destructive"
-                                            onClick={handleLogout}
-                                            disabled={isLoading}
+                        <SheetContent side="left" className="w-full max-w-xs px-4 py-6">
+                            <SheetTitle className="sr-only">User Menu</SheetTitle>
+                            <div className="flex flex-col h-full">
+                                {/* Logo in mobile menu */}
+                                <div className="mb-6 px-2">
+                                    <Logo className="h-8 w-auto" />
+                                </div>
+
+                                {/* Navigation links */}
+                                <nav className="flex-1 space-y-2">
+                                    {navLinks.map((link) => (
+                                        <Link
+                                            key={link.href}
+                                            href={link.href}
+                                            className={cn(
+                                                'block px-3 py-2 rounded-md text-base font-medium transition-colors',
+                                                pathname === link.href
+                                                    ? 'bg-accent text-accent-foreground'
+                                                    : 'text-foreground/80 hover:bg-accent/50 hover:text-accent-foreground'
+                                            )}
                                         >
-                                            {isLoading ? 'Logging out...' : 'Logout'}
+                                            {link.name}
+                                        </Link>
+                                    ))}
+                                </nav>
+
+                                {/* User section and theme toggle */}
+                                <div className="mt-auto space-y-4 pt-4 border-t">
+                                    {user ? (
+                                        <div className="flex items-center space-x-3 px-3 py-2">
+                                            <UserAvatar />
+                                            <div>
+                                                <p className="text-sm font-medium">{user.name}</p>
+                                                <p className="text-xs text-muted-foreground">{user.email}</p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            <Button variant="outline" className="w-full" asChild>
+                                                <Link href="/auth?mode=login">Login</Link>
+                                            </Button>
+                                            <Button className="w-full" asChild>
+                                                <Link href="/auth?mode=signup">Sign Up</Link>
+                                            </Button>
+                                        </div>
+                                    )}
+
+                                    {isMounted && (
+                                        <Button
+                                            variant="ghost"
+                                            className="w-full justify-start"
+                                            onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+                                        >
+                                            {resolvedTheme === 'dark' ? (
+                                                <>
+                                                    <Sun className="mr-2 h-4 w-4" />
+                                                    Light Mode
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Moon className="mr-2 h-4 w-4" />
+                                                    Dark Mode
+                                                </>
+                                            )}
                                         </Button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Button variant="outline" asChild>
-                                            <Link href="/auth?mode=login">Login</Link>
-                                        </Button>
-                                        <Button asChild>
-                                            <Link href="/auth?mode=signup">Sign Up</Link>
-                                        </Button>
-                                    </>
-                                )}
-                                {isMounted && (
-                                    <Button
-                                        variant="ghost"
-                                        className="justify-start"
-                                        onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-                                    >
-                                        {resolvedTheme === 'dark' ? (
-                                            <Sun className="mr-2 h-4 w-4" />
-                                        ) : (
-                                            <Moon className="mr-2 h-4 w-4" />
-                                        )}
-                                        <span>Toggle Theme</span>
-                                    </Button>
-                                )}
+                                    )}
+                                </div>
                             </div>
                         </SheetContent>
                     </Sheet>

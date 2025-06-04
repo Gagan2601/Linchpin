@@ -11,6 +11,7 @@ import { AuthController } from './auth.controller';
 import { User, UserSchema } from '../user/schemas/user.schema';
 import { EmailService } from 'src/email/email.service';
 import { AuthMiddleware } from 'src/common/middleware/auth.middleware';
+import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
   imports: [
@@ -20,17 +21,18 @@ import { AuthMiddleware } from 'src/common/middleware/auth.middleware';
     }),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
   ],
-  providers: [AuthService, EmailService],
+  providers: [AuthService, EmailService, JwtStrategy],
   controllers: [AuthController],
 })
 export class AuthModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(AuthMiddleware)
-      .forRoutes(
-        { path: 'auth/me', method: RequestMethod.GET },
-        { path: 'auth/logout', method: RequestMethod.POST },
-        { path: 'auth/refresh', method: RequestMethod.POST },
-      );
+    // REMOVE or COMMENT OUT this block:
+    // consumer
+    //   .apply(AuthMiddleware)
+    //   .forRoutes(
+    //     { path: 'auth/me', method: RequestMethod.GET },
+    //     { path: 'auth/logout', method: RequestMethod.POST },
+    //     { path: 'auth/refresh', method: RequestMethod.POST },
+    //   );
   }
 }

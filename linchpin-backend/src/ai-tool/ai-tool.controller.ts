@@ -7,10 +7,12 @@ import {
   Param,
   Body,
   Req,
+  Res,
   ForbiddenException,
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { AiToolService } from './ai-tool.service';
 import {
   SubmitAIToolDto,
@@ -141,5 +143,28 @@ export class AiToolController {
       notificationId,
     );
     return { message: 'Notification marked as read' };
+  }
+
+  @Get('logo-proxy')
+  @Throttle({ default: { limit: 100, ttl: 60000 } }) // 100/min
+  async getLogoProxy(@Query('url') url: string, @Res() res: Response) {
+    if (!url) {
+      return res.status(400).json({ error: 'URL parameter is required' });
+    }
+
+    try {
+      const logoData = await this.aiToolService.fetchLogo(url);
+
+      // Set appropriate headers
+      res.set({
+        'Content-Type': logoData.contentType,
+        'Cache-Control': 'public, max-age=86400', // Cache for 1 day
+        'Content-Length': logoData.buffer.length,
+      });
+
+      return res.send(logoData.buffer);
+    } catch (error) {
+      return res.status(404).json({ error: 'Logo not found' });
+    }
   }
 }

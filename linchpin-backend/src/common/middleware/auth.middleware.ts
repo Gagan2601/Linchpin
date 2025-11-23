@@ -18,12 +18,19 @@ export class AuthMiddleware implements NestMiddleware {
   ) {}
 
   async use(req: Request, res: Response, next: NextFunction) {
-    const authHeader = req.headers.authorization;
+    // Try to get token from cookie first, then from authorization header
+    let token = null;
+    if (req.cookies && req.cookies['access_token']) {
+      token = req.cookies['access_token'];
+    } else if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith('Bearer ')
+    ) {
+      token = req.headers.authorization.split(' ')[1];
+    }
 
-    if (!authHeader || !authHeader.startsWith('Bearer '))
-      throw new UnauthorizedException('Missing or invalid token');
+    if (!token) throw new UnauthorizedException('Missing or invalid token');
 
-    const token = authHeader.split(' ')[1];
     try {
       const decoded: any = jwt.verify(
         token,

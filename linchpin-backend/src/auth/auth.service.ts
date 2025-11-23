@@ -14,6 +14,7 @@ import { LoginInput } from './validations/login.zod';
 import { User, UserDocument } from '../user/schemas/user.schema';
 import { EmailService } from 'src/email/email.service';
 import { sanitizeUser } from 'src/common/utils/sanitize-user';
+import { Response } from 'express';
 
 @Injectable()
 export class AuthService {
@@ -102,12 +103,31 @@ export class AuthService {
 
   // Generate access & refresh tokens
   private async generateTokens(userId: string, email: string) {
-    const payload = { sub: userId, email };
+    const payload = { sub: userId, userId, email }; // Added userId for consistency
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, { expiresIn: '15m' }),
       this.jwtService.signAsync(payload, { expiresIn: '7d' }),
     ]);
     return { accessToken, refreshToken };
+  }
+
+  // Refresh token logic
+  async refreshToken(refreshToken: string) {
+    try {
+      const payload = await this.jwtService.verifyAsync(refreshToken, {
+        secret: process.env.JWT_SECRET,
+      });
+
+      // Generate new access token
+      const newAccessToken = await this.jwtService.signAsync(
+        { sub: payload.sub, userId: payload.userId, email: payload.email },
+        { expiresIn: '15m' },
+      );
+
+      return { accessToken: newAccessToken };
+    } catch (error) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
   }
 
   // Email verification logic
@@ -186,5 +206,56 @@ export class AuthService {
         error?.message || 'Failed to reset password',
       );
     }
+  }
+
+  async getCurrentUser(userId: string) {
+    try {
+      const user = await this.userModel.findById(userId).select('-password');
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
+      return sanitizeUser(user);
+    } catch (error) {
+      console.error('Get Current User Error:', error);
+      throw new UnauthorizedException('Invalid session');
+    }
+  }
+
+  async logout(res: Response) {
+    try {
+      // Clear the httpOnly cookies
+      res.cookie('access_token', '', {
+        httpOnly: true,
+        expires: new Date(0),
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+      });
+      res.cookie('refresh_token', '', {
+        httpOnly: true,
+        expires: new Date(0),
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+      });
+
+      return { message: 'Logged out successfully' };
+    } catch (error) {
+      console.error('Logout Error:', error);
+      throw new UnauthorizedException('Logout failed');
+    }
+  }
+
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    const user = await this.userModel.findById(userId);
+    if (!user) throw new UnauthorizedException('User not found');
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch)
+      throw new BadRequestException('Current password is incorrect');
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+    return { message: 'Password changed successfully' };
   }
 }

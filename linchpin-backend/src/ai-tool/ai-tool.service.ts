@@ -27,6 +27,8 @@ import {
 } from './validations/ai-tool.zod';
 import { z } from 'zod';
 import { EmailService } from 'src/email/email.service';
+import * as https from 'https';
+import * as http from 'http';
 
 @Injectable()
 export class AiToolService {
@@ -417,5 +419,50 @@ export class AiToolService {
     if (result.modifiedCount === 0) {
       throw new NotFoundException('Notification not found or already read');
     }
+  }
+
+  async fetchLogo(
+    url: string,
+  ): Promise<{ buffer: Buffer; contentType: string }> {
+    return new Promise((resolve, reject) => {
+      const protocol = url.startsWith('https') ? https : http;
+
+      protocol
+        .get(url, (response) => {
+          // Handle redirects
+          if (
+            response.statusCode >= 300 &&
+            response.statusCode < 400 &&
+            response.headers.location
+          ) {
+            return this.fetchLogo(response.headers.location)
+              .then(resolve)
+              .catch(reject);
+          }
+
+          if (response.statusCode !== 200) {
+            return reject(
+              new Error(`Failed to fetch logo: ${response.statusCode}`),
+            );
+          }
+
+          const chunks: Buffer[] = [];
+
+          response.on('data', (chunk) => {
+            chunks.push(chunk);
+          });
+
+          response.on('end', () => {
+            const buffer = Buffer.concat(chunks);
+            const contentType =
+              response.headers['content-type'] || 'image/png';
+
+            resolve({ buffer, contentType });
+          });
+        })
+        .on('error', (error) => {
+          reject(new Error(`Failed to fetch logo: ${error.message}`));
+        });
+    });
   }
 }

@@ -44,7 +44,7 @@
 }
 
 :root {
-  --radius: 0.625rem;
+  --radius: 1rem;
   --background: #f3f7fc; /* Background base */
   --foreground: #2d3748; /* Text main */
   --card: #ffffff;
@@ -55,9 +55,9 @@
   --primary-foreground: #ffffff;
   --secondary: #00c1a0; /* Accent secondary */
   --secondary-foreground: #ffffff;
-  --muted: #f3f7fc;
+  --muted: #e5e7eb; /* Tailwind gray-200 */
   --muted-foreground: #718096; /* Text secondary */
-  --accent: #f3f7fc;
+  --accent: #ede9fe;
   --accent-foreground: #6c47ff;
   --destructive: #ef4444;
   --border: #e2e8f0;
@@ -79,7 +79,7 @@
 }
 
 .dark {
-  --background: #1a202c;
+  --background: #000000;
   --foreground: #f7fafc;
   --card: #2d3748;
   --card-foreground: #f7fafc;
@@ -129,6 +129,10 @@
   scrollbar-width: none;
 }
 
+[data-radix-sheet-close] {
+  display: none !important;
+}
+
 @layer utilities {
   .shadow-glow-primary {
     box-shadow: 0 0 60px rgba(108, 71, 255, 0.4);
@@ -141,5 +145,57 @@
   }
   .shadow-glow-secondary-hover {
     box-shadow: 0 0 80px rgba(0, 193, 160, 0.6);
+  }
+
+  /* Animated Grid Background */
+  .bg-grid-pattern {
+    background-size: 40px 40px;
+    background-image: linear-gradient(to right, rgba(108, 71, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(108, 71, 255, 0.05) 1px, transparent 1px);
+    mask-image: radial-gradient(circle at center, black 40%, transparent 80%);
+  }
+  .dark .bg-grid-pattern {
+    background-image: linear-gradient(to right, rgba(139, 92, 246, 0.1) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(139, 92, 246, 0.1) 1px, transparent 1px);
+  }
+
+  /* Floating Orbs */
+  .animate-float {
+    animation: float 10s infinite ease-in-out;
+  }
+  .animate-float-delayed {
+    animation: float 12s infinite ease-in-out 2s;
+  }
+  
+  @keyframes float {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(-20px, 20px); }
+  }
+
+  /* Marquee Animation */
+  .animate-marquee {
+    animation: marquee 40s linear infinite;
+  }
+  .animate-marquee:hover {
+    animation-play-state: paused;
+  }
+
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  /* 3D Flip Card Utilities */
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  .transform-style-3d {
+    transform-style: preserve-3d;
+  }
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+  .rotate-y-180 {
+    transform: rotateY(180deg);
   }
 }

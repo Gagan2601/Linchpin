@@ -1,4 +1,3 @@
-// components/auth/SignupForm.tsx
 'use client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,9 +6,16 @@ import { useForm } from 'react-hook-form';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { SignupPayload } from '@/services/auth';
+import { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 
-export default function SignupForm() {
+interface SignupFormProps {
+    onSuccess?: () => void;
+}
+
+export default function SignupForm({ onSuccess }: SignupFormProps) {
     const { signup, isLoading } = useAuth();
+    const [showPassword, setShowPassword] = useState(false);
 
     const {
         register,
@@ -20,6 +26,9 @@ export default function SignupForm() {
     const onSubmit = async (data: SignupPayload) => {
         try {
             await signup(data);
+            if (onSuccess) {
+                onSuccess();
+            }
         } catch (error) {
             console.log(error);
             toast.error('Signup failed. Please try again.');
@@ -27,9 +36,9 @@ export default function SignupForm() {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-10">
             <div className="text-center">
-                <h2 className="text-2xl font-bold">Create Account</h2>
+                <h1 className="text-4xl font-bold">Create Account</h1>
                 <p className="text-muted-foreground">Get started with Linchpin</p>
             </div>
 
@@ -89,20 +98,31 @@ export default function SignupForm() {
                     )}
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 pb-7">
                     <Label htmlFor="password">Password</Label>
-                    <Input
-                        id="password"
-                        placeholder="••••••••"
-                        type="password"
-                        {...register('password', {
-                            required: 'Password is required',
-                            minLength: {
-                                value: 6,
-                                message: 'Password must be at least 6 characters',
-                            },
-                        })}
-                    />
+                    <div className="relative">
+                        <Input
+                            id="password"
+                            placeholder="••••••••"
+                            type={showPassword ? "text" : "password"}
+                            {...register('password', {
+                                required: 'Password is required',
+                                minLength: {
+                                    value: 6,
+                                    message: 'Password must be at least 6 characters',
+                                },
+                            })}
+                        />
+                        <button
+                            type="button"
+                            tabIndex={-1}
+                            aria-label={showPassword ? "Hide password" : "Show password"}
+                            className="absolute inset-y-0 right-3 flex items-center text-muted-foreground"
+                            onClick={() => setShowPassword((v) => !v)}
+                        >
+                            {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </button>
+                    </div>
                     {errors.password && (
                         <p className="text-sm text-red-500">{errors.password.message}</p>
                     )}

@@ -12,7 +12,7 @@ export class EmailService {
   });
 
   async sendVerificationEmail(email: string, token: string) {
-    const verificationLink = `http://localhost:3000/api/auth/verify-email/${token}`; //change when frontend ready
+    const verificationLink = `http://localhost:3001/auth/verify-email/${token}`; //change when frontend ready
 
     const info = await this.transporter.sendMail({
       from: '"Linchpin" <thelinchpin.tech@gmail.com>',
@@ -29,7 +29,7 @@ export class EmailService {
   }
 
   async sendPasswordResetEmail(email: string, token: string) {
-    const resetLink = `http://localhost:3000/reset-password?token=${token}`; //change when frontend ready
+    const resetLink = `http://localhost:3001/auth/reset-password?token=${token}`; //change when frontend ready
 
     await this.transporter.sendMail({
       from: '"Linchpin" <thelinchpin.tech@gmail.com>',
@@ -56,7 +56,7 @@ export class EmailService {
         ? 'has been approved and published!'
         : `was rejected. ${reason ? `Reason: ${reason}` : ''}`;
 
-    const frontendUrl = `http://localhost:3000/notification`; //add frontend url
+    const frontendUrl = `http://localhost:3001/notification`; //add frontend url
 
     await this.transporter.sendMail({
       to: email,

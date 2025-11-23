@@ -24,8 +24,6 @@ export async function apiClient<T>(
       credentials: "include", // For cookies if using httpOnly tokens
     });
 
-    console.log(response);
-
     const data = await response.json().catch(() => null);
 
     if (!response.ok) {

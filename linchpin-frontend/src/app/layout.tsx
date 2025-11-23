@@ -29,17 +29,17 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="dark"
+          enableSystem={true}
           disableTransitionOnChange
         >
           <AuthProvider>
             <Navbar />
-            <main className="flex min-h-screen flex-col items-center">{children}</main>
+            <main className="flex-1 flex flex-col items-center w-full">{children}</main>
             <Toaster position="top-center" richColors />
           </AuthProvider>
         </ThemeProvider>

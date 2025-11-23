@@ -35,7 +35,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
             // Simply make the auth check - cookies will be sent automatically
             const response = await authService.checkAuth();
-            console.log(response);
             if (response.error) {
                 if (response.status === 401) {
                     const refreshResponse = await authService.refreshToken();
@@ -178,13 +177,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setUser(null);
                 toast.success('You have been logged out successfully');
                 // Force a full page refresh to clear all state
-                window.location.href = '/auth?mode=login';
+                window.location.href = '/';
             }
         } catch (error) {
             console.error('Logout error:', error);
             toast.error('An unexpected error occurred during logout');
             setUser(null);
-            window.location.href = '/auth?mode=login';
+            window.location.href = '/';
         } finally {
             setIsLoading(false);
         }

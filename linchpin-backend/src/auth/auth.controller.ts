@@ -51,7 +51,7 @@ export class AuthController {
       // Set access token cookie (15 minutes)
       res.cookie('access_token', result.accessToken, {
         httpOnly: true,
-        secure: false,
+        secure: false, //process.env.NODE_ENV === 'production'
         sameSite: 'lax',
         maxAge: 15 * 60 * 1000, // 15 minutes
         path: '/',
@@ -61,7 +61,7 @@ export class AuthController {
       // Set refresh token cookie (7 days)
       res.cookie('refresh_token', result.refreshToken, {
         httpOnly: true,
-        secure: false,
+        secure: false, //process.env.NODE_ENV === 'production'
         sameSite: 'lax',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         path: '/',
@@ -96,8 +96,6 @@ export class AuthController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   async getCurrentUser(@Req() req) {
-    console.log('Cookies:', req.cookies);
-    console.log('User:', req.user);
     return this.authService.getCurrentUser(req.user.userId);
   }
 
@@ -107,26 +105,25 @@ export class AuthController {
     res.cookie('access_token', '', {
       httpOnly: true,
       expires: new Date(0),
-      secure: process.env.NODE_ENV === 'production',
+      secure: false, //process.env.NODE_ENV === 'production'
       sameSite: 'lax',
       path: '/',
-      domain: process.env.COOKIE_DOMAIN,
+      // domain: process.env.COOKIE_DOMAIN,
     });
 
     res.cookie('refresh_token', '', {
       httpOnly: true,
       expires: new Date(0),
-      secure: process.env.NODE_ENV === 'production',
+      secure: false, //process.env.NODE_ENV === 'production'
       sameSite: 'lax',
       path: '/',
-      domain: process.env.COOKIE_DOMAIN,
+      // domain: process.env.COOKIE_DOMAIN,
     });
 
     return { message: 'Logged out successfully' };
   }
 
   @Post('refresh')
-  @UseGuards(JwtAuthGuard)
   async refreshToken(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
@@ -142,13 +139,26 @@ export class AuthController {
     // Set new access token cookie
     res.cookie('access_token', result.accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false, //process.env.NODE_ENV === 'production'
       sameSite: 'lax',
       maxAge: 15 * 60 * 1000, // 15 minutes
       path: '/',
-      domain: process.env.COOKIE_DOMAIN,
+      // domain: process.env.COOKIE_DOMAIN,
     });
 
     return { message: 'Token refreshed successfully' };
+  }
+
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  async changePassword(
+    @Req() req,
+    @Body() body: { currentPassword: string; newPassword: string },
+  ) {
+    return this.authService.changePassword(
+      req.user.userId,
+      body.currentPassword,
+      body.newPassword,
+    );
   }
 }
